@@ -424,7 +424,7 @@ def spawn_planner():
 
     if mode != 'QUERY':
         # Pass the name of the output (or input) file
-        subprocess.Popen(['env', sys.executable, '-P', OMPL_DIR + f, '--', \
+        subprocess.Popen(['env2D', sys.executable, '-P', OMPL_DIR + f, '--', \
             bpy.data.objects['ompl_settings']['Outpath']])
 
     # Make a connection

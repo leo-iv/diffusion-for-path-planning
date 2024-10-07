@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env2D python3
 
 ######################################################################
 # Software License Agreement (BSD License)
@@ -40,39 +40,70 @@ import socket
 import pickle
 import sys
 
+from ompl import control as oc
 from ompl.morse.environment import *
 
 ##
-# \brief Set up MyEnvironment object. Plan using sockS as the socket to the Blender
-#    communicator script and sockC as the socket to the MORSE motion controller.
-def playWithMorse(sockS, sockC):
+# \brief Set up MyEnvironment, MorseSimpleSetup, and MyGoal objects.
+#    Plan using sockS as the socket to the Blender communicator script
+#    and sockC as the socket to the MORSE motion controller.
+def planWithMorse(sockS, sockC):
 
     env = None
     try:
         # Create a MORSE environment representation
         env = MyEnvironment(sockS, sockC)
 
-        # Read path from file for playback
-        solnSaveFile = sys.argv[sys.argv.index('--') + 1]
-        print("Loading path from file '" + solnSaveFile + ".")
-        with open(solnSaveFile, 'rb') as f:
-            (st, con, dur) = pickle.load(f)
-        for (i, control) in enumerate(con):
-            # Load state
-            env.call('submitState()', pickle.dumps(st[i]))
-            # Apply control
-            print(control)
-            env.applyControl(control)
-            # Simulate
-            for _ in range(round(dur[i] / (controlStepSize))):
-                env.worldStep(controlStepSize)
-        # Last state
-        env.call('submitState()', pickle.dumps(st[len(con)]))
+        # Create a simple setup object
+        ss = om.MorseSimpleSetup(env)
+        si = ss.getSpaceInformation()
+
+        # Set up goal
+        g = MyGoal(si, env)
+        ss.setGoal(g)
+
+        # Choose a planner
+        planner = oc.RRT(si)
+        """
+        # Alternative setup with a planner using a projection
+        planner = oc.KPIECE1(si)
+        space = si.getStateSpace()
+        # This projection uses the x,y coords of every rigid body in the state space.
+        proj = om.MorseProjection(space)
+        space.registerProjection("MorseProjection", proj)
+        planner.setProjectionEvaluator("MorseProjection")
+        """
+
+        ss.setPlanner(planner)
+
+        # Solve
+        ss.solve()
+
+        # Write the solution path to file
+        if ss.haveSolutionPath():
+            solnFileName = sys.argv[sys.argv.index('--') + 1]
+            print("Saving solution to '" + solnFileName + "'...")
+            cpath = ss.getSolutionPath()
+            # Save the states, controls, and durations
+            st = []
+            con = []
+            dur = []
+            for i in range(cpath.getControlCount()):
+                st.append(env.stateToList(cpath.getState(i)))
+                con.append(tuple(cpath.getControl(i)[j] for j in range(env.cdesc[0])))
+                dur.append(cpath.getControlDuration(i))
+            st.append(env.stateToList(cpath.getState(cpath.getControlCount())))
+            with open(solnFileName, 'wb') as f:
+                # Pickle it all into a file
+                pickle.dump((st, con, dur), f)
+            print("...done.")
+        else:
+            print("No solution found.")
 
     except Exception as msg:
         # Ignore errors caused by MORSE or Blender shutting down
         if str(msg) != "[Errno 104] Connection reset by peer" \
-            and str(msg) != "[Errno 32] Broken pipe":
+          and str(msg) != "[Errno 32] Broken pipe":
             raise
 
     finally:
@@ -86,8 +117,8 @@ sockC = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sockS.connect(('localhost', 50007))
 sockC.connect(('localhost', 4000))
 
-# Play
-playWithMorse(sockS, sockC)
+# Plan
+planWithMorse(sockS, sockC)
 
-# Quit this blender instance.
+# Quit this instance of Blender.
 exit(0)

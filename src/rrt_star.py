@@ -34,6 +34,18 @@ class RRTStarPlanner:
 
         self.ss.setPlanner(og.RRTstar(self.ss.getSpaceInformation()))
 
+    def __transform_path(self, path):
+        """
+        Transforms OMPL path to a np.array.
+        """
+        states = path.getStates()
+        output = np.zeros((len(states), self.N))
+        for i, state in enumerate(states):
+            for dim in range(self.N):
+                output[i, dim] = state[dim]
+
+        return output
+
     def set_start_goal(self, start, goal):
         """
         Sets start and goal state for the motion planning task.
@@ -60,8 +72,8 @@ class RRTStarPlanner:
             max_time: float: maximal time for the planning task (in seconds)
 
         Returns:
-            path from start to goal
+            path from start to goal - numpy.ndarray matrix where each row contains one point in the path
         """
         self.ss.clear()
         self.ss.solve(max_time)
-        return self.ss.getSolutionPath()
+        return self.__transform_path(self.ss.getSolutionPath())

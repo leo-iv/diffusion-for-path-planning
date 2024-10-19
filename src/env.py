@@ -1,5 +1,7 @@
-from shapely import Polygon, Point
-from image import Image
+import shapely.ops
+from shapely import Polygon, Point, LineString
+from shapely.ops import nearest_points
+
 from src.rrt_star import RRTStarPlanner
 import numpy as np
 
@@ -8,9 +10,6 @@ class Env:
     """
     Simple 2D environment for a motion planning task with polygonal obstacles and point robot.
     """
-    __BACKGROUND_COLOR = (255, 255, 255)
-    __OBSTACLE_COLOR = (222, 196, 132)
-    __IMAGE_SIZE = 2000  # higher number means more pixels
 
     def __init__(self, width: float, height: float):
         """
@@ -22,6 +21,14 @@ class Env:
         self.height = height
         self.obstacles = []
 
+    def size(self):
+        """
+        Returns width and height of the environment
+        Returns:
+        (width, height) tuple
+        """
+        return self.width, self.height
+
     def add_obstacle(self, boundary):
         """
         Adds polygonal obstacle to the environment
@@ -32,7 +39,7 @@ class Env:
         """
         self.obstacles.append(Polygon(boundary))
 
-    def check_collision(self, coords):
+    def point_collides(self, coords):
         """
         Checks if the given coordinates are collision free (outside obstacles).
 
@@ -40,14 +47,78 @@ class Env:
             coords: a tuple (x, y) with the coordinates in the environment
 
         Returns:
-            True if the point is collision free, false otherwise.
+            True if the point collides with obstacles in the environment, false otherwise.
         """
 
+        point = Point(coords)
         for obstacle in self.obstacles:
-            if obstacle.contains(Point(coords)):
-                return False
+            if obstacle.contains(point):
+                return True
 
-        return True
+        return False
+
+    def segment_collides(self, point1, point2):
+        """
+        Checks if the line segment between point1 and point2 is collision free (outside obstacles).
+
+        Args:
+            point1: a tuple (x, y) with the coordinates in the environment
+            point2: a tuple (x, y) with the coordinates in the environment
+
+        Returns:
+            True if the line segment collides with obstacles in the environment, false otherwise.
+        """
+
+        segment = LineString([point1, point2])
+        for obstacle in self.obstacles:
+            if segment.intersects(obstacle):
+                return True
+
+        return False
+
+    def nearest_free_point(self, coords):
+        """
+        Returns nearest free point to the query point.
+
+        Args:
+            coords: a tuple (x, y) with the coordinates of the query point
+
+        Returns:
+            Nearest free point to the query point - (x, y) tuple
+        """
+        point = Point(coords)
+        for obstacle in self.obstacles:
+            if obstacle.contains(point):
+                nearest_point = nearest_points(obstacle.boundary, point)[0]
+                return nearest_point.x, nearest_point.y
+
+        return coords  # query point is outside obstacles
+
+    def nearest_collision_point(self, coords):
+        """
+        Returns nearest collision point to the query point.
+
+        Args:
+            coords: a tuple (x, y) with the coordinates of the query point
+
+        Returns:
+            Nearest collision point to the query point - (x, y) tuple
+        """
+        if len(self.obstacles) < 1:
+            return None
+
+        point = Point(coords)
+        nearest_obstacle = None
+        min_distance = float('inf')
+
+        for obstacle in self.obstacles:
+            distance = point.distance(obstacle)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_obstacle = obstacle
+
+        nearest_point = nearest_points(nearest_obstacle, point)[0]
+        return nearest_point.x, nearest_point.y
 
     def run_RRTstar(self, start, goal, max_time):
         """
@@ -61,23 +132,6 @@ class Env:
         Returns:
             Result path
         """
-        planner = RRTStarPlanner(2, (0.0, self.width), lambda state: self.check_collision((state[0], state[1])))
+        planner = RRTStarPlanner(2, (0.0, self.width), lambda state: not self.point_collides((state[0], state[1])))
         planner.set_start_goal(np.array(start), np.array(goal))
         return planner.solve(max_time)
-
-    def create_image(self, file_name: str):
-        """
-        Creates an SVG image of the environment and returns image.Image object for further modification of the image.
-
-        Args:
-            file_name: name of the SVG file (should end with .svg)
-
-        Returns:
-            image.Image object
-        """
-        img = Image(file_name, self.width, self.height, Env.__IMAGE_SIZE)
-        img.fill(Env.__BACKGROUND_COLOR)
-        for polygon in self.obstacles:
-            img.add_polygon(polygon, Env.__OBSTACLE_COLOR)
-
-        return img

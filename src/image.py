@@ -7,22 +7,29 @@ class Image:
     Renders the environment objects into a vector image.
     """
 
-    def __init__(self, file_name: str, world_width: float, world_height: float, image_size: float = 2000):
+    def __init__(self, file_name, env, obstacle_color = (222, 196, 132), background_color = (255, 255, 255), image_size = 2000):
         """
+        Creates SVG image of the environment and returns Image class for further modification.
+
         Args:
             file_name: name of the file where the SVG image will be saved
-            world_width: width of the environment (which this class creates image of)
-            world_height: height of the environment
+            env: env.Env class instance
             image_size: width of the image (image height is calculated according to world height)
         """
-        self.world_width = world_width
-        self.world_height = world_height
+
+        self.world_width, self.world_height = env.size()
 
         image_width = image_size
-        image_height = image_size * (world_height / world_width)
+        image_height = image_size * (self.world_height / self.world_width)
         self.surface = cairo.SVGSurface(file_name, image_width, image_height)
         self.cr = cairo.Context(self.surface)
-        self.cr.scale(image_width / world_width, image_height / world_height)
+        self.cr.scale(image_width / self.world_width, image_height / self.world_height)
+
+        # adding env picture
+        self.fill(background_color)
+        for polygon in env.obstacles:
+            self.add_polygon(polygon, obstacle_color)
+
 
     def __transform_point(self, point):
         """
@@ -79,17 +86,17 @@ class Image:
         self.cr.arc(center[0], center[1], radius, 0, 2 * np.pi)
         self.cr.fill()
 
-    def add_path(self, path, color, width):
+    def add_path(self, path, color = (87, 126, 137), width = 0.005):
         """
         Adds path to the image.
 
         Args:
-            path: numpy.ndarray matrix where each row represent one point in the path
+            path: matrix where each row represent one point in the path - shape: (number of points in path, 2)
             color: color of the polygon - tuple (R, G, B) with the RGB color intensities (each from 0 to 255)
             width: width of the path
         """
         for point in path:
-            self.add_circle(point, 2 * width, color)
+            self.add_circle(point, 1.2 * width, color)
 
         transformed_path = map(self.__transform_point, path)
 

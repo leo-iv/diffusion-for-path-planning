@@ -1,5 +1,19 @@
 import cairo
 import numpy as np
+import random
+
+color_palette = [
+    (12, 234, 217),
+    (58, 202, 223),
+    (114, 158, 253),
+    (138, 100, 214),
+    (92, 58, 146),
+    (211, 253, 161),
+    (150, 227, 165),
+    (65, 190, 194),
+    (253, 198, 117),
+    (253, 157, 117)
+]
 
 
 class Image:
@@ -7,7 +21,8 @@ class Image:
     Renders the environment objects into a vector image.
     """
 
-    def __init__(self, file_name, env, obstacle_color = (222, 196, 132), background_color = (255, 255, 255), image_size = 2000):
+    def __init__(self, file_name, env, obstacle_color=(222, 196, 132), background_color=(255, 255, 255),
+                 image_size=2000):
         """
         Creates SVG image of the environment and returns Image class for further modification.
 
@@ -29,7 +44,6 @@ class Image:
         self.fill(background_color)
         for polygon in env.obstacles:
             self.add_polygon(polygon, obstacle_color)
-
 
     def __transform_point(self, point):
         """
@@ -60,8 +74,8 @@ class Image:
             polygon: shapely.Polygon object
             color: color of the polygon - tuple (R, G, B) with the RGB color intensities (each from 0 to 255)
         """
-        boundary = map(self.__transform_point,
-                       polygon.exterior.coords)  # transforming polygon boundary into cairo coordinate system
+        # transforming polygon boundary into cairo coordinate system
+        boundary = map(self.__transform_point, polygon.exterior.coords)
 
         x0, y0 = next(boundary)
         self.cr.move_to(x0, y0)
@@ -73,9 +87,9 @@ class Image:
 
     def add_circle(self, center, radius, color, transform=True):
         """
-        Adds a circular point to the image
+        Adds a circular point to the image.
         Args:
-            center: center of the circle
+            center: center of the circle - (x, y) tuple
             radius: radius of the circle
             color: color of the circle - tuple (R, G, B) with the RGB color intensities (each from 0 to 255)
         """
@@ -86,7 +100,35 @@ class Image:
         self.cr.arc(center[0], center[1], radius, 0, 2 * np.pi)
         self.cr.fill()
 
-    def add_path(self, path, color = (87, 126, 137), width = 0.005):
+    def add_star(self, center, radius, color):
+        """
+        Adds five-pointed star to the image.
+        Args:
+            center: center of the star - (x, y) tuple
+            radius: radius of the star
+            color: color of the star - tuple (R, G, B) with the RGB color intensities (each from 0 to 255)
+        """
+        num_points = 5
+        center = self.__transform_point(center)
+        self.cr.set_source_rgb(color[0] / 255, color[1] / 255, color[2] / 255)
+
+        delta_angle = 2 * np.pi / (num_points * 2)
+        start_angle = -np.pi / 2
+        for i in range(num_points * 2):
+            r = radius if i % 2 == 0 else radius / 2
+
+            x = center[0] + r * np.cos(i * delta_angle + start_angle)
+            y = center[1] + r * np.sin(i * delta_angle + start_angle)
+            if i == 0:
+                self.cr.move_to(x, y)
+            else:
+                self.cr.line_to(x, y)
+
+        self.cr.fill()
+
+
+
+    def add_path(self, path, color=(87, 126, 137), width=0.005):
         """
         Adds path to the image.
 
@@ -95,8 +137,11 @@ class Image:
             color: color of the polygon - tuple (R, G, B) with the RGB color intensities (each from 0 to 255)
             width: width of the path
         """
-        for point in path:
+
+        self.add_circle(path[0], 1.8 * width, color)
+        for point in path[1:-1]:
             self.add_circle(point, 1.2 * width, color)
+        self.add_star(path[-1], 3 * width, color)
 
         transformed_path = map(self.__transform_point, path)
 
@@ -111,3 +156,23 @@ class Image:
             x, y = point
             self.cr.line_to(x, y)
         self.cr.stroke()
+
+    def add_paths(self, paths, use_one_color=False, color=(87, 126, 137), width=0.005):
+        """
+        Adds multiple paths to the image.
+
+        Args:
+            paths: numpy tensor with paths - shape: (number of paths, number of points in path, 2)
+            use_one_color: set to True if all paths should have the same color - specified via the color param
+            color: color of the paths (if use_one_color is set to True)
+            width: width of the paths
+        """
+        for i, path in enumerate(paths):
+            c = color
+            if not use_one_color:
+                if i < len(color_palette):
+                    c = color_palette[i]
+                else:
+                    # generating random color instead
+                    c = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+            self.add_path(path, c, width)

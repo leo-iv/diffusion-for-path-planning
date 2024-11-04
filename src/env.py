@@ -2,7 +2,7 @@ import shapely.ops
 from shapely import Polygon, Point, LineString
 from shapely.ops import nearest_points
 
-from src.rrt_star import RRTStarPlanner
+from rrt_star import RRTStarPlanner
 import numpy as np
 
 

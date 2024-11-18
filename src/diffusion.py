@@ -229,7 +229,7 @@ def evaluate(model, scheduler, noise, generator, device, env: Env, num_inference
                                                                      point]  # torch.tensor(env.nearest_collision_point(env_point))
 
                 distances = (sequence - steer_obstacle_vectors) ** 2
-                sequence = sequence - 0.1 * torch.autograd.grad(distances.sum(), sequence)[0]
+                sequence = (sequence - 0.2 * torch.autograd.grad(distances.sum(), sequence)[0])
 
             if steer_length:
                 distances = (sequence[:, :, :-1] - sequence[:, :, 1:]) ** 2
@@ -299,15 +299,15 @@ class PathDenoiser:
 
         self.noise_scheduler = DDPMScheduler(num_train_timesteps=300)
 
-    def generate_paths(self, n: int, num_inference_steps: int, starts, goals, steer_length=False, steer_obstacles=False,
-                       img_output_dir=None):
+    def generate_paths(self, starts, goals, samples_per_start: int, num_inference_steps: int, steer_length=False,
+                       steer_obstacles=False, img_output_dir=None):
         """
         Generates n paths using the diffusion model.
         Args:
-            n: number of paths to generate
-            num_inference_steps: number of diffusion steps used during inference
             starts: numpy array of start configurations - shape: (n, 2)
             goals: numpy array of goal configurations - shape: (n, 2)
+            samples_per_start: number of samples to generate per one start-goal configuration
+            num_inference_steps: number of diffusion steps used during inference
             steer_length: must be set to True to use length steering during inference
             steer_obstacles: must be set to True to use obstacle steering during inference
             img_output_dir: output directory where svg images of the diffusion process will be stored
@@ -315,10 +315,11 @@ class PathDenoiser:
         Returns:
             result paths as numpy array of shape (n, path_length, 2)
         """
+        n = len(starts) * samples_per_start
         inpaint_shape = (n, self.config.in_channels, self.config.sequence_length)
         inpaint_mask = torch.full(inpaint_shape, float('Nan'), device=self.model.device)
-        inpaint_mask[:, :, 0] = torch.tensor(starts)
-        inpaint_mask[:, :, -1] = torch.tensor(goals)
+        inpaint_mask[:, :, 0] = torch.tensor(np.tile(starts, (samples_per_start, 1)))
+        inpaint_mask[:, :, -1] = torch.tensor(np.tile(goals, (samples_per_start, 1)))
 
         seed_generator = torch.manual_seed(self.config.seed)
         noise_input = randn_tensor(inpaint_shape, generator=seed_generator, device=self.model.device)

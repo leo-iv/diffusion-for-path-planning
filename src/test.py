@@ -12,7 +12,6 @@ from diffusion import PathDenoiser, evaluate, train_model
 from diffusers.utils.torch_utils import randn_tensor
 
 from image import Image
-from image import color_palette
 
 
 def create_dataset_img(filename, dataset, n_paths, env):
@@ -331,3 +330,4 @@ if __name__ == "__main__":
     # test_easy()
     # test_circles()
     # test_empty()
+

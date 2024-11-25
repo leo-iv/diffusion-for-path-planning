@@ -1,8 +1,8 @@
-import shapely.ops
 from shapely import Polygon, Point, LineString
 from shapely.ops import nearest_points
 
 from rrt_star import RRTStarPlanner
+from car_like import solve_rrt_car_like
 import numpy as np
 
 
@@ -135,3 +135,49 @@ class Env:
         planner = RRTStarPlanner(2, (0.0, self.width), lambda state: not self.point_collides((state[0], state[1])))
         planner.set_start_goal(np.array(start), np.array(goal))
         return planner.solve(max_time)
+
+    def run_RRT_car_like(self, start, goal, goal_tolerance=0.05, max_iters=10000, steer_limit=np.pi / 4, n_actions=5,
+                         action_time=0.05, car_length=0.1, n_collision_checks=3):
+        """
+        Finds path from start to goal using RRT car-like algorithm.
+
+        Args:
+            start: (x, y, rotation) coordinates of the start position
+            goal: (x, y) coordinates of the goal position
+            goal_tolerance: defines the "goal region" around the goal position - float
+            steer_limit: defines maximal car steering angle - steering angle is then generated from the interval
+                         [-steer_limit, steer_limit] - python float
+            n_actions: number of actions (steering angles) tried during tree expansion
+            action_time: time per one action ( = time between nodes on the path)
+            car_length: length of the car-like model
+            max_iters: maximal number of iteration of the RRT algorithm
+            n_collision_checks: number of collision checks performed on one tree expansion
+
+        Returns:
+            (path, tree) tuple or None if path was not found
+            path: sequence of states and actions: (x, y, rotation_angle, steer_angle) - numpy array (path_length, 4)
+            tree: RRT tree - Tree object
+        """
+        boundaries = np.array([[0.0, self.width], [0.0, self.height]])
+        return solve_rrt_car_like(np.array(start), np.array(goal), goal_tolerance, boundaries,
+                                  lambda state: self.point_collides((state[0], state[1])),
+                                  steer_limit, n_actions, action_time, car_length, max_iters, n_collision_checks)
+
+
+# some sample Envs:
+
+def load_hard_env():
+    env = Env(1.0, 1.0)
+    env.add_obstacle([(0.35, 0.11), (0.45, 0.22), (0.53, 0.06)])
+    env.add_obstacle([(0.12, 0.30), (0.16, 0.48), (0.26, 0.37)])
+    env.add_obstacle([(0.69, 0.22), (0.90, 0.40), (0.82, 0.16)])
+    env.add_obstacle([(0.43, 0.42), (0.57, 0.33), (0.73, 0.42), (0.70, 0.58), (0.50, 0.60)])
+    env.add_obstacle([(0.14, 0.65), (0.30, 0.60), (0.47, 0.75), (0.27, 0.71), (0.14, 0.80)])
+    env.add_obstacle([(0.66, 0.71), (0.88, 0.73), (0.50, 0.90)])
+    return env
+
+
+def load_easy_env():
+    env = Env(1.0, 1.0)
+    env.add_obstacle([(0.32, 0.37), (0.29, 0.56), (0.42, 0.68), (0.58, 0.69), (0.70, 0.52), (0.66, 0.35), (0.49, 0.29)])
+    return env

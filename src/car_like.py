@@ -14,6 +14,16 @@ def move_car_like(start_state, steer_angle, car_length, time):
     return np.array([x, y, phi])
 
 
+def is_collision_free(collision_detector, start_state, steer_angle, car_length, time, n_checks):
+    # performs n collision checks on the car-like like curve from start_state when steering with steering angle for given time
+    for i in range(1, n_checks + 1):
+        state = move_car_like(start_state, steer_angle, car_length, i * (time / n_checks))
+        if collision_detector(state[:2]):
+            return False
+
+    return True
+
+
 def get_path(goal_node):
     path = []
 
@@ -22,7 +32,7 @@ def get_path(goal_node):
     while node is not None:
         state = np.copy(node.state)
         tmp = state[3]
-        state[3] = steer_angle # moving control inputs from children to parents
+        state[3] = steer_angle  # moving control inputs from children to parents
         steer_angle = tmp
         path.append(state)
         node = node.parent
@@ -32,7 +42,8 @@ def get_path(goal_node):
 
 
 def solve_rrt_car_like(start, goal, goal_tolerance, boundaries, collision_detector,
-                       steer_limit=np.pi / 3, n_actions=3, action_time=0.1, car_length=0.1, iters=1000):
+                       steer_limit=np.pi / 3, n_actions=3, action_time=0.1, car_length=0.1, iters=1000,
+                       n_collision_checks=3, goal_bias=0.1):
     """
     Finds path in 2D space using car-like RRT algorithm with fixed speed.
 
@@ -52,6 +63,8 @@ def solve_rrt_car_like(start, goal, goal_tolerance, boundaries, collision_detect
         action_time: time per one action ( = time between nodes on the path)
         car_length: length of the car-like model
         iters: number of iteration of the RRT algorithm
+        n_collision_checks: number of collision checks performed on one tree expansion
+        goal_bias: probability of expanding towards goal instead of sampling randomly
 
     Returns:
         path: sequence of states and actions: (x, y, rotation_angle, steer_angle) - numpy array (path_length, 4)
@@ -65,16 +78,20 @@ def solve_rrt_car_like(start, goal, goal_tolerance, boundaries, collision_detect
     tree.add_node(start[:2], np.append(start, np.nan), None)  # NaN represent "missing" steering angle
 
     for i in range(iters):
-        rand_coords = get_random_state(ranges_starts, ranges)
+        if np.random.rand() < goal_bias:
+            rand_coords = goal  # expand toward goal
+        else:
+            rand_coords = get_random_state(ranges_starts, ranges)  # else sample randomly
+
         near_node = tree.get_nearest(rand_coords)
 
         best = np.inf
         new_state = None
         for angle in steer_angles:
             state = move_car_like(near_node.state, angle, car_length, action_time)
-            # TODO: add collision detection
-            if np.linalg.norm(state[:2] - rand_coords) < best:
-                new_state = np.append(state, angle) # storing steering angle with the new node (control input used in parent node)
+            if is_collision_free(collision_detector, near_node.state, angle, car_length, action_time,
+                                 n_collision_checks) and np.linalg.norm(state[:2] - rand_coords) < best:
+                new_state = np.append(state, angle)  # storing steering angle with the new node
                 best = np.linalg.norm(state[:2] - rand_coords)
 
         if new_state is not None:

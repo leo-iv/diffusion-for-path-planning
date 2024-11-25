@@ -1,3 +1,4 @@
+from src.env import load_hard_env, load_easy_env
 from tree import Tree
 from env import Env
 from image import Image
@@ -25,17 +26,23 @@ def test_nearest_neighbour():
 
 
 def test_rrt():
-    start = np.array([0.1, 0.1, 0.1])
+    env = load_hard_env()
+    start = np.array([0.1, 0.1, 0])
     goal = np.array([0.9, 0.9])
-    boundaries = np.array([[0, 1], [0, 1]])
-    path, tree = solve_rrt_car_like(start, goal, 0.1, boundaries, None, n_actions=3, action_time=0.1,
-                                    steer_limit=np.pi / 6, iters=1000)
-    print("tree_length: ", len(tree.nodes))
-    print("path_length: ", len(path))
-    env = Env(1.0, 1.0)
-    img = Image("../out/car_like_test/rrt_test/empty.svg", env)
-    img.add_tree_car_like(tree, resolution=100)
-    img.add_path_car_like(path, resolution=100)
+    path, tree = env.run_RRT_car_like(start, goal, n_collision_checks=5)
+    img = Image("../out/car_like_test/rrt_test/hard.svg", env)
+    img.add_tree_car_like(tree)
+    img.add_path_car_like(path)
+
+    env = load_easy_env()
+    start = np.array([0.1, 0.5, 0])
+    goal = np.array([0.9, 0.5])
+    path, tree = env.run_RRT_car_like(start, goal, n_collision_checks=5)
+    img = Image("../out/car_like_test/rrt_test/easy.svg", env)
+    img.add_tree_car_like(tree)
+    img.add_path_car_like(path)
+
+
 
 
 if __name__ == "__main__":

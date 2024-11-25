@@ -137,7 +137,7 @@ class Env:
         return planner.solve(max_time)
 
     def run_RRT_car_like(self, start, goal, goal_tolerance=0.05, max_iters=10000, steer_limit=np.pi / 4, n_actions=5,
-                         action_time=0.05, car_length=0.1, n_collision_checks=3):
+                         action_time=0.05, car_length=0.1, n_collision_checks=3, goal_bias = 0.1):
         """
         Finds path from start to goal using RRT car-like algorithm.
 
@@ -152,6 +152,7 @@ class Env:
             car_length: length of the car-like model
             max_iters: maximal number of iteration of the RRT algorithm
             n_collision_checks: number of collision checks performed on one tree expansion
+            goal_bias: probability of expanding towards goal instead of sampling randomly
 
         Returns:
             (path, tree) tuple or None if path was not found
@@ -161,7 +162,7 @@ class Env:
         boundaries = np.array([[0.0, self.width], [0.0, self.height]])
         return solve_rrt_car_like(np.array(start), np.array(goal), goal_tolerance, boundaries,
                                   lambda state: self.point_collides((state[0], state[1])),
-                                  steer_limit, n_actions, action_time, car_length, max_iters, n_collision_checks)
+                                  steer_limit, n_actions, action_time, car_length, max_iters, n_collision_checks, goal_bias)
 
 
 # some sample Envs:

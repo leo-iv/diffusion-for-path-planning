@@ -26,6 +26,14 @@ def test_nearest_neighbour():
 
 
 def test_rrt():
+    env = Env(1.0, 1.0)
+    start = np.array([0.1, 0.1, 0])
+    goal = np.array([0.9, 0.9])
+    path, tree = env.run_RRT_car_like(start, goal, n_collision_checks=5, goal_bias=0.00001)
+    img = Image("../out/car_like_test/rrt_test/empty.svg", env)
+    img.add_tree_car_like(tree)
+    img.add_path_car_like(path)
+
     env = load_hard_env()
     start = np.array([0.1, 0.1, 0])
     goal = np.array([0.9, 0.9])

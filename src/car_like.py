@@ -7,11 +7,12 @@ def get_random_state(ranges_starts, ranges):
 
 
 def move_car_like(start_state, steer_angle, car_length, time):
-    phi = start_state[2] + time * np.tan(steer_angle) / car_length
-    y = start_state[1] + time * np.sin(phi)
-    x = start_state[0] + time * np.cos(phi)
+    x_0, y_0, phi_0 = start_state[:3]
+    phi_dt = phi_0 + time * np.tan(steer_angle) / car_length
+    y_dt = y_0 + (car_length / np.tan(steer_angle)) * (np.cos(phi_0) - np.cos(phi_dt))
+    x_dt = x_0 + (car_length / np.tan(steer_angle)) * (np.sin(phi_dt) - np.sin(phi_0))
 
-    return np.array([x, y, phi])
+    return np.array([x_dt, y_dt, phi_dt])
 
 
 def is_collision_free(collision_detector, start_state, steer_angle, car_length, time, n_checks):

@@ -69,6 +69,7 @@ def solve_rrt_car_like(start, goal, goal_tolerance, boundaries, collision_detect
 
     Returns:
         path: sequence of states and actions: (x, y, rotation_angle, steer_angle) - numpy array (path_length, 4)
+              or None if feasible path was not found
         tree: RRT tree - Tree object
     """
     steer_angles = [i * (2 * steer_limit / n_actions) - steer_limit for i in range(n_actions)]
@@ -76,11 +77,12 @@ def solve_rrt_car_like(start, goal, goal_tolerance, boundaries, collision_detect
     ranges_starts = boundaries[:, 0]
 
     tree = Tree()
-    tree.add_node(start[:2], np.append(start, np.nan), None)  # NaN represent "missing" steering angle
+    dist = tree.kd_tree.getStateSpace().distance # using dynotree's distance function
+    tree.add_node(start[:2], np.append(start, np.nan), None)  # NaN represents "missing" steering angle
 
     for i in range(iters):
         if np.random.rand() < goal_bias:
-            rand_coords = goal  # expand toward goal
+            rand_coords = goal  # expand toward goal (with random rotation)
         else:
             rand_coords = get_random_state(ranges_starts, ranges)  # else sample randomly
 
@@ -91,14 +93,31 @@ def solve_rrt_car_like(start, goal, goal_tolerance, boundaries, collision_detect
         for angle in steer_angles:
             state = move_car_like(near_node.state, angle, car_length, action_time)
             if is_collision_free(collision_detector, near_node.state, angle, car_length, action_time,
-                                 n_collision_checks) and np.linalg.norm(state[:2] - rand_coords) < best:
+                                 n_collision_checks) and dist(state[:2], rand_coords) < best:
                 new_state = np.append(state, angle)  # storing steering angle with the new node
-                best = np.linalg.norm(state[:2] - rand_coords)
+                best = dist(state[:2], rand_coords)
 
         if new_state is not None:
             new_node = tree.add_node(new_state[:2], new_state, near_node)
-            if np.linalg.norm(new_state[:2] - goal) < goal_tolerance:
+            if dist(new_state[:2], goal) < goal_tolerance:
                 # found solution
                 return get_path(new_node), tree
 
-    return None
+    return None, tree
+
+
+def get_action_time(state1, state2, steering_angle, car_length):
+    """
+    Computes time difference between two states on a car-like path.
+
+    Args:
+        state1: [x, y, car_rotation] - numpy array (3, )
+        state2: [x, y, car_rotation] - numpy array (3, )
+        steering_angle: steering angle applied at state1
+        car_length: python float
+
+    Returns:
+        python float
+    """
+
+    return (state2[2] - state1[2]) * car_length / np.tan(steering_angle)

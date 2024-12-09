@@ -1,5 +1,5 @@
 import numpy as np
-
+import pydynotree as dynotree
 
 class Node:
     def __init__(self, coords, state, parent):
@@ -19,6 +19,8 @@ class Tree:
 
     def __init__(self):
         self.nodes = []
+        self.kd_tree = dynotree.TreeR2()
+        self.kd_tree.init_tree()
 
     def add_node(self, coords, state = None, parent: Node = None):
         """
@@ -37,6 +39,7 @@ class Tree:
         if parent is not None:
             parent.add_child(new_node)
         self.nodes.append(new_node)
+        self.kd_tree.addPoint(coords, len(self.nodes) - 1, True)
         return new_node
 
     def get_nearest(self, coords):
@@ -49,17 +52,7 @@ class Tree:
         Returns:
             Node object
         """
-        # TODO: speed up using some kd-tree library
-        min_node = None
-        min_dist = np.inf
-
-        for node in self.nodes:
-            dist = np.linalg.norm(coords - node.coords)
-            if dist < min_dist:
-                min_node = node
-                min_dist = dist
-
-        return min_node
+        return self.nodes[self.kd_tree.search(coords).id]
 
     def get_root(self):
         """

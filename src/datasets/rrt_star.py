@@ -1,54 +1,7 @@
 import torch
-import random
 import numpy as np
 
-
-def _generate_start_goal(env):
-    # generates free start and goal configurations in the environment at least half the env size apart
-    width, height = env.size()
-
-    def sample_start():
-        # sample a random point from the "borders" of the env
-        x = random.uniform(0, width / 2)
-        y = random.uniform(0, height / 2)
-        if x > width / 4:
-            x += width / 2
-        if y > height / 4:
-            y += height / 2
-        return x, y
-
-    def sample_goal(start_coords):
-        # sample from the opposite side of the env to start point
-        start_x, start_y = start_coords
-        if random.random() < 0.5:
-            # "opposite x"
-            if start_x < width / 4:
-                x = random.uniform(3 * width / 4, width)
-            else:
-                x = random.uniform(0, width / 4)
-
-            y = random.uniform(0, height)
-        else:
-            # "opposite y"
-            if start_y < height / 4:
-                y = random.uniform(3 * height / 4, height)
-            else:
-                y = random.uniform(0, height / 4)
-
-            x = random.uniform(0, width)
-
-        return x, y
-
-    start = sample_start()
-    while env.point_collides(start):
-        start = sample_start()  # sample until we get collision free point
-
-    stop = sample_goal(start)
-    while env.point_collides(stop):
-        stop = sample_goal(start)
-
-    return start, stop
-
+from .utils import generate_start_goal
 
 def _resample_path(path, new_n_points):
     # resamples given path so it has new_n_points points
@@ -85,6 +38,7 @@ def _resample_path(path, new_n_points):
 def generate_RRTStar_dataset(file_name, n_starts, samples_per_start, path_length, env, rrt_star_time=0.2):
     """
     Generates a dataset of 2D RRT* generated paths and saves it into .pt file - can be then loaded by the PathPlanningDataset class.
+
     Args:
         file_name: .pt file
         n_starts: number of randomly generated start and goal configuration
@@ -97,7 +51,7 @@ def generate_RRTStar_dataset(file_name, n_starts, samples_per_start, path_length
     dataset = torch.empty(n_samples, 2, path_length)
 
     for start_idx in range(n_starts):
-        start, goal = _generate_start_goal(env)
+        start, goal = generate_start_goal(env)
 
         for sample_idx in range(samples_per_start):
             path = env.run_RRTstar(start, goal, rrt_star_time)

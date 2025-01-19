@@ -1,3 +1,10 @@
+"""
+!!! DISCLAIMER !!!
+This file contains outdated code from the early stages of development and is no longer compatible with other parts of
+the source code. For proper usage of the framework, please refer to the test_car_like.py file. This file is retained
+solely for documentation purposes and may be removed in future versions of the project.
+"""
+
 import random
 
 import numpy as np
@@ -8,11 +15,10 @@ import math
 from env import Env
 from datasets import generate_circles_dataset, generate_RRTStar_dataset, generate_RRTStar_dataset_fixed, \
     PathPlanningDataset
-from diffusion import PathDenoiser, evaluate, train_model
+from diffusion import PathDenoiser, train_path_denoiser
 from diffusers.utils.torch_utils import randn_tensor
 
 from image import Image
-from image import color_palette
 
 
 def create_dataset_img(filename, dataset, n_paths, env):
@@ -60,54 +66,16 @@ def test_hard():
     env.add_obstacle([(0.14, 0.65), (0.30, 0.60), (0.47, 0.75), (0.27, 0.71), (0.14, 0.80)])
     env.add_obstacle([(0.66, 0.71), (0.88, 0.73), (0.50, 0.90)])
 
-    # generate_RRTStar_dataset("../datasets/datasetRRT_hard_1000.pt", 200, 5, 32, env, 0.2)
+    # generate_RRTStar_dataset("../datasets/datasetRRT_hard_10000.pt", 2000, 5, 32, env, 0.2)
 
-    # dataset = PathPlanningDataset("../datasets/datasetRRT_hard.pt")
-    #
-    # # dataset image
-    # Image("../out/hard_test/hard_env.svg", env)
-    # img = Image("../out/hard_test/hard_dataset.svg", env)
-    # for i in range(0, len(dataset), math.ceil(len(dataset) / 30)):
-    #     img.add_path(dataset[i].T)
+    dataset = PathPlanningDataset("../datasets/datasetRRT_hard_10000.pt")
 
-    # train_model("../models/hard_model_1000.pt", dataset)
+    # create_dataset_img("../out/hard_test/generic_10000/hard_dataset.svg", dataset, 20, env)
 
-    # model = PathDenoiser("../models/hard_model_1000.pt", env)
-    # n = 10
-    # start = [0.1, 0.1]
-    # goal = [0.9, 0.9]
-    # evaluate_steering_combinations("../out/hard_test", "hard", n, 300,
-    #                                [start for _ in range(n)], [goal for _ in range(n)], env, model)
-
-    # file_prefix = "../out/hard_test/fixed_ends/"
-    # # generate_RRTStar_dataset_fixed("../datasets/datasetRRT_hard_fixed_1000.pt", [(0.1, 0.1)], [(0.9, 0.9)], 1000, 32, env)
-    # dataset = PathPlanningDataset("../datasets/datasetRRT_hard_fixed_1000.pt")
-    # # create_dataset_img(file_prefix + "dataset.svg", dataset, 30, env)
-    # # train_model("../models/hard_model_fixed_ends_1000.pt", dataset)
-    # model = PathDenoiser("../models/hard_model_fixed_ends_1000.pt", env)
-    # evaluate_steering_combinations(file_prefix, "hard_env_fixed_ends", [(0.1, 0.1)], [(0.9, 0.9)], env, model, 10)
-
-    # one direction straight
-    dataset_size = 1000
-    starts = [(random.uniform(0.05, 0.95), 0.05) for _ in range(dataset_size)]
-    goals = [(start_x, 0.95) for (start_x, start_y) in starts]
-    # generate_RRTStar_dataset_fixed("../datasets/datasetRRT_hard_one_direction_straight_1000.pt",
-    #                                starts,
-    #                                goals,
-    #                                1, 32, env)
-    file_prefix = "../out/hard_test/one_direction_straight/"
-    dataset = PathPlanningDataset("../datasets/datasetRRT_hard_one_direction_straight_1000.pt")
-    # dataset image
-    # create_dataset_img(file_prefix + "dataset.svg", dataset, 30, env)
-
-    train_model("../models/hard_one_direction_straight_1000.pt", dataset)
-    model = PathDenoiser("../models/hard_one_direction_straight_1000.pt", env)
-    n = 10
-    start = [0.5, 0.05]
-    goal = [0.5, 0.95]
-    evaluate_steering_combinations(file_prefix, "hard_one_direction_straight", [start for _ in range(n)],
-                                   [goal for _ in range(n)],
-                                   env, model)
+    start = [0.1, 0.1]
+    goal = [0.9, 0.9]
+    train_path_denoiser("../out/hard_test/generic_10000/", dataset,
+                        eval_starts=np.array([start for _ in range(10)]), eval_goals=np.array([goal for _ in range(10)]), env=env)
 
 
 def test_easy():
@@ -120,8 +88,8 @@ def test_easy():
 
     # generic dataset test:
     # generate_RRTStar_dataset("../datasets/datasetRRT_easy_10000.pt", 200, 50, 32, env, 0.2)
-    # dataset = PathPlanningDataset("../datasets/datasetRRT_easy_10000.pt")
-    # create_dataset_img("../out/easy_test/generic_dataset/dataset.svg", dataset, 30, env)
+    dataset = PathPlanningDataset("../datasets/datasetRRT_easy_10000.pt")
+    create_dataset_img("../out/easy_test/generic_dataset/dataset20.svg", dataset, 20, env)
 
     # img = Image("../out/easy_test/generic_dataset/dataset.svg", env)
     # for i in range(0, len(dataset), math.ceil(len(dataset) / 30)):
@@ -154,8 +122,8 @@ def test_easy():
     # Image(file_prefix + "different_ends.svg", env).add_paths(paths)
 
     # one direction test:
-    file_prefix = "../out/easy_test/one_direction/"
-    dataset_size = 1000
+    # file_prefix = "../out/easy_test/one_direction/"
+    # dataset_size = 1000
     # generate_RRTStar_dataset_fixed(f"../datasets/datasetRRT_easy_one_direction_{dataset_size}.pt",
     #                                [(random.uniform(0.05, 0.25), random.uniform(0.1, 0.9)) for _ in
     #                                 range(dataset_size)],
@@ -173,24 +141,24 @@ def test_easy():
     # Image(file_prefix + "easy_one_direction_fixed_start.svg", env).add_paths(paths)
 
     # one direction straight test:
-    file_prefix = "../out/easy_test/one_direction_straight/"
-    dataset_size = 2000
-    starts = [(0.1, random.uniform(0.05, 0.95)) for _ in range(int(dataset_size / 2))]
-    goals = [(0.9, start_y) for (_, start_y) in starts]
+    # file_prefix = "../out/easy_test/one_direction_straight/"
+    # dataset_size = 2000
+    # starts = [(0.1, random.uniform(0.05, 0.95)) for _ in range(int(dataset_size / 2))]
+    # goals = [(0.9, start_y) for (_, start_y) in starts]
     # generate_RRTStar_dataset_fixed(f"../datasets/datasetRRT_easy_one_direction_straight_{dataset_size}.pt",
     #                                starts, goals, 2, 32, env)
-    dataset = PathPlanningDataset(f"../datasets/datasetRRT_easy_one_direction_straight_{dataset_size}.pt")
+    # dataset = PathPlanningDataset(f"../datasets/datasetRRT_easy_one_direction_straight_{dataset_size}.pt")
     # create_dataset_img(file_prefix + "dataset.svg", dataset, 50, env)
     # train_model("../models/easy_model_one_direction_straight_2000.pt", dataset)
-    model = PathDenoiser("../models/easy_model_one_direction_1000.pt", env)
-    evaluate_steering_combinations(file_prefix, "easy_one_direction_straight",
-                                   [(0.1, 0.1 * y) for y in range(1, 10)], [(0.9, 0.1 * y) for y in range(1, 10)], env,
-                                   model, samples_per_start=2)
-    paths = model.generate_paths([(0.1, 0.1)], [(0.9, 0.1)], 10, 300, True, True, file_prefix + "diffusion_process")
-    Image(file_prefix + "easy_one_direction_straight_fixed_start.svg", env).add_paths(paths)
-
-    paths = model.generate_paths([(0.9, 0.1)], [(0.1, 0.1)], 10, 300, True, True)
-    Image(file_prefix + "easy_one_direction_straight_opposite_direction.svg", env).add_paths(paths)
+    # model = PathDenoiser("../models/easy_model_one_direction_1000.pt", env)
+    # evaluate_steering_combinations(file_prefix, "easy_one_direction_straight",
+    #                                [(0.1, 0.1 * y) for y in range(1, 10)], [(0.9, 0.1 * y) for y in range(1, 10)], env,
+    #                                model, samples_per_start=2)
+    # paths = model.generate_paths([(0.1, 0.1)], [(0.9, 0.1)], 10, 300, True, True, file_prefix + "diffusion_process")
+    # Image(file_prefix + "easy_one_direction_straight_fixed_start.svg", env).add_paths(paths)
+    #
+    # paths = model.generate_paths([(0.9, 0.1)], [(0.1, 0.1)], 10, 300, True, True)
+    # Image(file_prefix + "easy_one_direction_straight_opposite_direction.svg", env).add_paths(paths)
 
 
 def test_circles():
@@ -331,3 +299,4 @@ if __name__ == "__main__":
     # test_easy()
     # test_circles()
     # test_empty()
+

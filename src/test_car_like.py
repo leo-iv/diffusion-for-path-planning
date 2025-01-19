@@ -67,18 +67,11 @@ def create_dataset_img(filename, dataset, n_paths, env):
     img.add_paths_car_like(np.array([random.choice(dataset).T for _ in range(n_paths)]))
 
 
-def test_dataset():
-    env = load_easy_env()
-    # generate_car_like_dataset("../datasets/dataset_car_like_easy_50000.pt", env, 50000, path_length=32)
-    dataset = PathPlanningDataset("../out/car_like_test/easy_50000/dataset_car_like_easy_50000.pt")
-    create_dataset_img("../out/car_like_test/easy_50000/dataset.svg", dataset, 30, env)
-
-
 def test_easy():
     env = load_easy_env()
-    # generate_car_like_dataset("../datasets/dataset_car_like_easy_50000.pt", env, 50000, path_length=32)
+    generate_car_like_dataset("../datasets/dataset_car_like_easy_50000.pt", env, 50000, path_length=32)
     dataset = PathPlanningDataset("../out/car_like_test/easy_50000/dataset_car_like_easy_50000.pt")
-    # create_dataset_img("../out/car_like_test/easy_50000/dataset.svg", dataset, 30, env)
+    create_dataset_img("../out/car_like_test/easy_50000/dataset.svg", dataset, 20, env)
 
     train_path_denoiser("../out/car_like_test/easy_50000/train", dataset,
                         eval_starts=np.array([(0.1, 0.5, float('Nan'), float('Nan')) for _ in range(10)]),
@@ -89,34 +82,20 @@ def test_easy():
 def test_hard():
     env = load_hard_env()
 
-    # generate_car_like_dataset("../out/car_like_test/hard_10000/dataset_car_like_hard_10000.pt", env, 10000, path_length=64)
+    generate_car_like_dataset("../out/car_like_test/hard_10000/dataset_car_like_hard_10000.pt", env, 50000, path_length=64)
     dataset = PathPlanningDataset("../out/car_like_test/hard_10000/dataset_car_like_hard_10000.pt")
-    # create_dataset_img("../out/car_like_test/hard_10000/dataset.svg", dataset, 10, env)
+    create_dataset_img("../out/car_like_test/hard_10000/dataset.svg", dataset, 20, env)
 
-    train_path_denoiser("../out/car_like_test/hard_10000/train", dataset, config=TrainingConfig(sequence_length=64),
-                        eval_starts=np.array([(x, 0.1, float('Nan'), float('Nan')) for x in
-                                              np.array([[0.1, 0.6, 0.9] for _ in range(3)]).flatten()]),
-                        eval_goals=np.array([(x, 0.9, float('Nan'), float('Nan')) for x in
-                                             np.array([[0.1, 0.4, 0.9] for _ in range(3)]).flatten()]),
+    train_path_denoiser("../out/car_like_test/hard_10000/train2", dataset,
+                        config=TrainingConfig(sequence_length=64, in_channels=4, out_channels=4, num_epochs=100,
+                                              learning_rate=1e-5, lr_warmup_steps=1000),
+                        eval_starts=np.array([(0.9, 0.1, float('Nan'), float('Nan')) for _ in range(10)]),
+                        eval_goals=np.array([(0.1, 0.9, float('Nan'), float('Nan')) for _ in range(10)]),
                         env=env)
-    # model = PathDenoiser("../models/car_like_model_hard_1000.pt", env, legacy_load=True)
-    # paths = model.generate_paths(np.array([(0.1, 0.1, float('Nan'), float('Nan')) for _ in range(3)]),
-    #                              np.array([(0.9, 0.9, float('Nan'), float('Nan')) for _ in range(3)]),
-    #                              1, steer_length=True, steer_obstacles=False)
-    # print(paths.shape)
-    # img = Image("../out/car_like_test/hard_1000/test_length_steer.svg", env)
-    # img.add_paths(paths)
-    #
-    # paths = model.generate_paths(np.array([(0.1, 0.1, float('Nan'), float('Nan')) for _ in range(3)]),
-    #                              np.array([(0.9, 0.9, float('Nan'), float('Nan')) for _ in range(3)]),
-    #                              1, steer_length=True, steer_obstacles=True)
-    # img = Image("../out/car_like_test/hard_1000/test_length_and_obstacle_steer.svg", env)
-    # img.add_paths(paths)
 
 
 if __name__ == "__main__":
     # test_nearest_neighbour()
     # test_rrt()
-    # test_dataset()
     # test_easy()
     test_hard()

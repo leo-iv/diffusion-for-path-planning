@@ -31,8 +31,8 @@ def eprint(*args, **kwargs):
 @dataclass
 class TrainingConfig:
     sequence_length: int = 32
-    in_channels: int = 4
-    out_channels: int = 4
+    in_channels: int = 2
+    out_channels: int = 2
     train_batch_size: int = 64
     eval_batch_size: int = 64
     num_epochs: int = 50
@@ -329,9 +329,9 @@ class PathDenoiser:
                 self.config = config
 
             self.model = PathDenoiserModel(self.config).model
-            self.model.load_state_dict(torch.load(model_path, weights_only=True))
+            self.model.load_state_dict(torch.load(model_path, weights_only=False))
         else:
-            state = torch.load(model_path, weights_only=True)
+            state = torch.load(model_path, weights_only=False)
             self.config = state['config']
             self.model = PathDenoiserModel(self.config).model
             self.model.load_state_dict(state['model'])
